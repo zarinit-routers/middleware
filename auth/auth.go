@@ -26,6 +26,24 @@ func getJwtKey() jwt.Keyfunc {
 	}
 }
 
+var (
+	ErrNoAuthData        = fmt.Errorf("no auth data in current request context")
+	ErrCorruptedAuthData = fmt.Errorf("corrupted auth data in current request context")
+)
+
+func GetData(c *gin.Context, auth *AuthData) error {
+	if data, exists := c.Get(AUTH_DATA_KEY); !exists {
+		return ErrNoAuthData
+	} else {
+		authData, ok := data.(*AuthData)
+		if !ok {
+			return ErrCorruptedAuthData
+		}
+		auth = authData
+	}
+	return nil
+}
+
 func Middleware(validators ...AuthValidateFunc) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		tokenString := c.Request.Header.Get("Authorization")

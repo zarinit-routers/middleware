@@ -31,7 +31,7 @@ var (
 	ErrCorruptedAuthData = fmt.Errorf("corrupted auth data in current request context")
 )
 
-func GetData(c *gin.Context, auth *AuthData) error {
+func GetUser(c *gin.Context, user *AuthData) error {
 	if data, exists := c.Get(AUTH_DATA_KEY); !exists {
 		return ErrNoAuthData
 	} else {
@@ -39,7 +39,7 @@ func GetData(c *gin.Context, auth *AuthData) error {
 		if !ok {
 			return ErrCorruptedAuthData
 		}
-		auth = authData
+		user = authData
 	}
 	return nil
 }

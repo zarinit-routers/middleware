@@ -19,9 +19,13 @@ func (a *AuthData) IsAdmin() bool {
 }
 
 func NewDataFromToken(t *jwt.Token) *AuthData {
+	roles, ok := t.Claims.(jwt.MapClaims)["roles"].([]string)
+	if !ok {
+		roles = []string{}
+	}
 	return &AuthData{
 		UserId:         t.Claims.(jwt.MapClaims)["userId"].(string),
 		OrganizationId: t.Claims.(jwt.MapClaims)["groupId"].(string),
-		Roles:          t.Claims.(jwt.MapClaims)["groups"].([]string),
+		Roles:          roles,
 	}
 }

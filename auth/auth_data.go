@@ -1,8 +1,10 @@
 package auth
 
 import (
+	"fmt"
 	"slices"
 
+	"github.com/charmbracelet/log"
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -18,14 +20,30 @@ func (a *AuthData) IsAdmin() bool {
 	return slices.Contains(a.Roles, AdminGroup)
 }
 
-func NewDataFromToken(t *jwt.Token) *AuthData {
-	roles, ok := t.Claims.(jwt.MapClaims)["roles"].([]string)
+func NewDataFromToken(t *jwt.Token) (*AuthData, error) {
+	claims, ok := t.Claims.(jwt.MapClaims)
+	if !ok {
+		return nil, fmt.Errorf("failed get jwt.MapClaims from token.Claims")
+	}
+	roles, ok := claims["roles"].([]string)
 	if !ok {
 		roles = []string{}
 	}
-	return &AuthData{
-		UserId:         t.Claims.(jwt.MapClaims)["userId"].(string),
-		OrganizationId: t.Claims.(jwt.MapClaims)["groupId"].(string),
-		Roles:          roles,
+
+	userId, ok := claims["userId"].(string)
+	if !ok {
+		return nil, fmt.Errorf("failed get userId from token claims")
 	}
+
+	orgId, ok := claims["groupId"].(string)
+	if !ok {
+		log.Warn("User has no organization (groupId) specified", "userId", userId)
+		orgId = ""
+	}
+
+	return &AuthData{
+		UserId:         userId,
+		OrganizationId: orgId,
+		Roles:          roles,
+	}, nil
 }

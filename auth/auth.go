@@ -59,7 +59,12 @@ func Middleware(validators ...AuthValidateFunc) gin.HandlerFunc {
 			return
 		}
 
-		data := NewDataFromToken(token)
+		data, err := NewDataFromToken(token)
+		if err != nil {
+			log.Error("Failed get authentication data from token", "error", err)
+			c.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
 
 		for _, v := range validators {
 			if err := v(*data); err != nil {

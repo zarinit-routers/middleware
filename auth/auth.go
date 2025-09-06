@@ -31,17 +31,18 @@ var (
 	ErrCorruptedAuthData = fmt.Errorf("corrupted auth data in current request context")
 )
 
-func GetUser(c *gin.Context, user *AuthData) error {
+// TODO: fix nested if statements
+func GetUser(c *gin.Context, user *AuthData) (*AuthData, error) {
 	if data, exists := c.Get(AUTH_DATA_KEY); !exists {
-		return ErrNoAuthData
+		return nil, ErrNoAuthData
 	} else {
 		authData, ok := data.(*AuthData)
 		if !ok {
-			return ErrCorruptedAuthData
+			return nil, ErrCorruptedAuthData
+		} else {
+			return authData, nil
 		}
-		user = authData
 	}
-	return nil
 }
 
 func Middleware(validators ...AuthValidateFunc) gin.HandlerFunc {

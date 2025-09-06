@@ -32,7 +32,7 @@ var (
 )
 
 // TODO: fix nested if statements
-func GetUser(c *gin.Context, user *AuthData) (*AuthData, error) {
+func GetUser(c *gin.Context) (*AuthData, error) {
 	if data, exists := c.Get(AUTH_DATA_KEY); !exists {
 		return nil, ErrNoAuthData
 	} else {

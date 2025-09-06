@@ -26,7 +26,7 @@ func getJwtKey() jwt.Keyfunc {
 	}
 }
 
-func AuthMiddleware() gin.HandlerFunc {
+func Middleware(validators ...AuthValidateFunc) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		tokenString := c.Request.Header.Get("Authorization")
 		if tokenString == "" {
@@ -43,26 +43,27 @@ func AuthMiddleware() gin.HandlerFunc {
 
 		data := NewDataFromToken(token)
 
+		for _, v := range validators {
+			if err := v(*data); err != nil {
+				log.Error("Auth data validation failed, request aborted", "error", err)
+				c.AbortWithStatus(http.StatusUnauthorized)
+				return
+			}
+		}
+
 		c.Set(AUTH_DATA_KEY, data)
 
 		c.Next()
 	}
 }
 
-func AdminOnly() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		param, exists := c.Get(AUTH_DATA_KEY)
-		if !exists {
-			log.Error("Authentication failed with no data in current context")
-			c.AbortWithStatus(http.StatusUnauthorized)
-			return
+type AuthValidateFunc func(AuthData) error
+
+func AdminOnly() AuthValidateFunc {
+	return func(ad AuthData) error {
+		if !ad.IsAdmin() {
+			return fmt.Errorf("current user is not an administrator")
 		}
-		data := param.(*AuthData)
-		if !data.IsAdmin() {
-			log.Error("Authenticated user is not an admin")
-			c.AbortWithStatus(http.StatusMethodNotAllowed)
-			return
-		}
-		c.Next()
+		return nil
 	}
 }

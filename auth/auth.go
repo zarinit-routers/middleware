@@ -22,7 +22,7 @@ func getJwtKey() jwt.Keyfunc {
 		if key == "" {
 			return nil, fmt.Errorf("environment variable %q not specified", ENV_JWT_KEY)
 		}
-		return key, nil
+		return []byte(key), nil
 	}
 }
 

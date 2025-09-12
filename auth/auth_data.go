@@ -6,18 +6,25 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
+)
+
+var (
+	KeyOrganizationID = "groupId" // Change to organizationId ASAP
+	KeyUserID         = "userId"
+	KeyRoles          = "roles"
 )
 
 type AuthData struct {
-	UserId         string
-	OrganizationId string
+	UserID         uuid.UUID
+	OrganizationID uuid.UUID
 	Roles          []string
 }
 
-const AdminGroup = "admin"
+const AdminRole = "admin"
 
 func (a *AuthData) IsAdmin() bool {
-	return slices.Contains(a.Roles, AdminGroup)
+	return slices.Contains(a.Roles, AdminRole)
 }
 
 func NewDataFromToken(t *jwt.Token) (*AuthData, error) {
@@ -25,25 +32,45 @@ func NewDataFromToken(t *jwt.Token) (*AuthData, error) {
 	if !ok {
 		return nil, fmt.Errorf("failed get jwt.MapClaims from token.Claims")
 	}
-	roles, ok := claims["roles"].([]string)
+
+	authData := &AuthData{}
+	roles, ok := claims[KeyRoles].([]string)
 	if !ok {
 		roles = []string{}
+	} else {
+		authData.Roles = roles
 	}
 
-	userId, ok := claims["userId"].(string)
+	userId, err := getUUID(claims, KeyUserID)
+	if err != nil {
+		return nil, fmt.Errorf("failed get UserID from token claims: %s", err)
+	} else {
+		authData.UserID = userId
+	}
+
+	orgId, err := getUUID(claims, KeyOrganizationID)
+	if err != nil {
+		log.Warn("User has no organization key specified", "key", KeyOrganizationID, "userId", userId)
+		authData.OrganizationID = uuid.Nil
+	} else {
+		authData.OrganizationID = orgId
+	}
+
+	return authData, nil
+}
+
+func getUUID(claims jwt.MapClaims, key string) (uuid.UUID, error) {
+	value, ok := claims[key]
 	if !ok {
-		return nil, fmt.Errorf("failed get userId from token claims")
+		return uuid.Nil, fmt.Errorf("claim %s not found", key)
 	}
-
-	orgId, ok := claims["groupId"].(string)
+	str, ok := value.(string)
 	if !ok {
-		log.Warn("User has no organization (groupId) specified", "userId", userId)
-		orgId = ""
+		return uuid.Nil, fmt.Errorf("claim %s is not a string", key)
 	}
-
-	return &AuthData{
-		UserId:         userId,
-		OrganizationId: orgId,
-		Roles:          roles,
-	}, nil
+	id, err := uuid.Parse(str)
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("claim %s is not a valid UUID", key)
+	}
+	return id, nil
 }

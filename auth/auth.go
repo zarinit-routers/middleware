@@ -86,7 +86,7 @@ type AuthValidateFunc func(AuthData) error
 func AdminOnly() AuthValidateFunc {
 	return func(ad AuthData) error {
 		if !ad.IsAdmin() {
-			return fmt.Errorf("current user is not an administrator")
+			return fmt.Errorf("current user is not an administrator, roles %v", ad.Roles)
 		}
 		return nil
 	}

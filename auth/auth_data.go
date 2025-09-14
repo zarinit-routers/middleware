@@ -36,10 +36,9 @@ func NewDataFromToken(t *jwt.Token) (*AuthData, error) {
 	authData := &AuthData{}
 	roles, ok := claims[KeyRoles].([]string)
 	if !ok {
-		roles = []string{}
-	} else {
-		authData.Roles = roles
+		log.Warn("User has no roles key specified", "key", KeyRoles)
 	}
+	authData.Roles = roles
 
 	userId, err := getUUID(claims, KeyUserID)
 	if err != nil {

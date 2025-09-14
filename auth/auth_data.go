@@ -2,6 +2,7 @@ package auth
 
 import (
 	"fmt"
+	"reflect"
 	"slices"
 
 	"github.com/charmbracelet/log"
@@ -34,11 +35,7 @@ func NewDataFromToken(t *jwt.Token) (*AuthData, error) {
 	}
 
 	authData := &AuthData{}
-	roles, ok := claims[KeyRoles].([]string)
-	if !ok {
-		log.Warn("User has no roles key specified", "key", KeyRoles)
-	}
-	authData.Roles = roles
+	authData.Roles = getRoles(claims)
 
 	userId, err := getUUID(claims, KeyUserID)
 	if err != nil {
@@ -56,6 +53,28 @@ func NewDataFromToken(t *jwt.Token) (*AuthData, error) {
 	}
 
 	return authData, nil
+}
+
+func getRoles(c jwt.MapClaims) []string {
+	rolesClaims, ok := c["roles"]
+	if !ok {
+		log.Warn("User has no roles key specified", "key", KeyRoles)
+		return []string{}
+	}
+	rolesArr, ok := rolesClaims.([]any)
+	if !ok {
+		log.Warn("Roles specified not as array", "key", KeyRoles, "type", reflect.TypeOf(rolesClaims).String())
+	}
+
+	var roles []string
+	for _, role := range rolesArr {
+		if role, ok := role.(string); ok {
+			roles = append(roles, role)
+		} else {
+			log.Warn("Role is not a string", "key", KeyRoles, "type", reflect.TypeOf(role).String())
+		}
+	}
+	return roles
 }
 
 func getUUID(claims jwt.MapClaims, key string) (uuid.UUID, error) {

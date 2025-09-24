@@ -3,7 +3,6 @@ package auth
 import (
 	"fmt"
 	"net/http"
-	"os"
 
 	"github.com/charmbracelet/log"
 	"github.com/gin-gonic/gin"
@@ -14,17 +13,6 @@ import (
 const AUTH_DATA_KEY = "middleware-auth-data"
 
 const ENV_JWT_KEY = "JWT_SECURITY_KEY"
-
-func getJwtKey() jwt.Keyfunc {
-
-	return func(t *jwt.Token) (any, error) {
-		key := os.Getenv(ENV_JWT_KEY)
-		if key == "" {
-			return nil, fmt.Errorf("environment variable %q not specified", ENV_JWT_KEY)
-		}
-		return []byte(key), nil
-	}
-}
 
 var (
 	ErrNoAuthData        = fmt.Errorf("no auth data in current request context")
@@ -45,7 +33,27 @@ func GetUser(c *gin.Context) (*AuthData, error) {
 	}
 }
 
-func Middleware(validators ...AuthValidateFunc) gin.HandlerFunc {
+type GetSecurityTokenFunc func() ([]byte, error)
+
+func New(tokenFunc GetSecurityTokenFunc) *AuthMiddleware {
+	return &AuthMiddleware{tokenFunc: tokenFunc}
+}
+
+type AuthMiddleware struct {
+	tokenFunc GetSecurityTokenFunc
+}
+
+func (m *AuthMiddleware) getSecurityKey() jwt.Keyfunc {
+	return func(t *jwt.Token) (any, error) {
+		key, err := m.tokenFunc()
+		if err != nil {
+			log.Warn("Failed get security key", "error", err)
+		}
+		return key, nil
+	}
+}
+
+func (m *AuthMiddleware) Middleware(validators ...AuthValidateFunc) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		tokenString := c.Request.Header.Get("Authorization")
 		if tokenString == "" {
@@ -53,9 +61,9 @@ func Middleware(validators ...AuthValidateFunc) gin.HandlerFunc {
 			c.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
-		token, err := jwt.Parse(tokenString, getJwtKey())
+		token, err := jwt.Parse(tokenString, m.getSecurityKey())
 		if err != nil {
-			log.Error("Authentication failed", "error", err)
+			log.Error("Authentication failed on parsing JWT", "error", err)
 			c.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}

@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	KeyOrganizationID = "groupId" // Change to organizationId ASAP
+	KeyOrganizationID = "groupId" // TODO: Change to organizationId ASAP
 	KeyUserID         = "userId"
 	KeyRoles          = "roles"
 )
@@ -68,8 +68,8 @@ func getRoles(c jwt.MapClaims) []string {
 
 	var roles []string
 	for _, role := range rolesArr {
-		if role, ok := role.(string); ok {
-			roles = append(roles, role)
+		if r, ok := role.(string); ok {
+			roles = append(roles, r)
 		} else {
 			log.Warn("Role is not a string", "key", KeyRoles, "type", reflect.TypeOf(role).String())
 		}
